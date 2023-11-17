@@ -1,7 +1,8 @@
-import ArgParse
+import ArgParse, ProfileView
 
 include("mlp.jl")
 using .MLP
+using Profile
 
 Optional{T} = Union{Missing,Nothing,T}
 
@@ -31,7 +32,7 @@ function read_dataset_lines(dataset_file)
     return dataset_lines
 end
 
-function convert_dataset_to_matrix(dataset_lines)
+function convert_dataset_to_matrix(dataset_lines)::Tuple{Matrix,Matrix}
     matrix = Matrix{Optional{Float64}}(nothing, 0, 31)
     results = []
     # converter = Dict("M" => 1, "B" => 1)
@@ -60,29 +61,26 @@ function convert_dataset_to_matrix(dataset_lines)
     return matrix, results
 end
 
-
 function main(ARGS)
-
     parse_args = parse_commandline(ARGS)
 
     dataset_lines = read_dataset_lines(parse_args["dataset"])
     X, Y = convert_dataset_to_matrix(dataset_lines)
 
-    X_valid = []
-    Y_valid = []
+    X_valid::Matrix{Float64} = [;;]
+    Y_valid::Matrix{Int64} = [;;]
     if !isnothing(parse_args["dataset-valid"])
         dataset_valid_lines = read_dataset_lines(parse_args["dataset-valid"])
         X_valid, Y_valid = convert_dataset_to_matrix(dataset_valid_lines)
     end
 
     create_network([
-        LayerParameters(31, "leaky relu", "glorot_normal"),
         LayerParameters(31, "relu", "glorot_normal"),
-        LayerParameters(15, "tanh", "glorot_normal"),
+        LayerParameters(31, "relu", "glorot_normal"),
+        LayerParameters(15, "relu", "glorot_normal"),
         LayerParameters(2, "softmax", "glorot_normal"),
     ])
-
-    train(X, Y, X_valid, Y_valid, "binary_crossentropy", 0.0001, 8, 500)
+    train(X, Y, X_valid, Y_valid, "binary_crossentropy", 0.0001, 256, 1000)
 end
 
 if abspath(PROGRAM_FILE) == @__FILE__
